@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>停車繳費系統</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 450px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    h1 {
+      font-size: 22px;
+      color: #333;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* 步驟指示器 */
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #e0e0e0;
+      z-index: 1;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+      flex: 1;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      color: #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .step.active .step-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .step.completed .step-number {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+    }
+
+    .step-label {
+      font-size: 11px;
+      color: #999;
+      text-align: center;
+    }
+
+    .step.active .step-label {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .step.completed .step-label {
+      color: #11998e;
+    }
+
+    /* 內容區塊 */
+    .step-content {
+      display: none;
+    }
+
+    .step-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #444;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    /* 停車場列表 */
+    .parking-list {
+      list-style: none;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .parking-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .parking-item:hover {
+      background: #f0f2ff;
+    }
+
+    .parking-item.selected {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    .parking-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 15px;
+    }
+
+    .parking-location {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    /* 車牌輸入 */
+    .plate-input-container {
+      margin-bottom: 16px;
+    }
+
+    .plate-label {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .plate-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 18px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      outline: none;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+
+    .plate-input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .plate-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .plate-suggestion {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .plate-suggestion:hover {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    .plate-suggestion.selected {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    /* 信用卡選擇 */
+    .card-list {
+      list-style: none;
+    }
+
+    .card-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .card-item:hover {
+      background: #f0f2ff;
+    }
+
+    .card-item.selected {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 16px;
+    }
+
+    .card-icon {
+      font-size: 24px;
+    }
+
+    .card-benefit {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .card-tag {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    /* 折抵資訊 */
+    .discount-info {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .info-value {
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .info-value.highlight {
+      color: #667eea;
+      font-size: 16px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      margin-top: 12px;
+      padding: 16px;
+      color: white;
+    }
+
+    .total-label {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .total-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    /* 按鈕 */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 16px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: #f0f2ff;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-secondary:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn-group .btn {
+      flex: 1;
+      margin-top: 0;
+    }
+
+    /* 確認頁面 */
+    .confirm-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .confirm-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .confirm-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .confirm-icon {
+      font-size: 24px;
+      margin-right: 12px;
+    }
+
+    .confirm-details {
+      flex: 1;
+    }
+
+    .confirm-title {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .confirm-value {
+      font-size: 15px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    /* 隱藏的網址 */
+    .hidden-url {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🅿️ 停車繳費系統</h1>
+    <p class="subtitle">四步驟快速完成繳費</p>
+
+    <!-- 步驟指示器 -->
+    <div class="steps">
+      <div class="step active" data-step="1">
+        <div class="step-number">1</div>
+        <div class="step-label">選擇停車場</div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-number">2</div>
+        <div class="step-label">輸入車牌</div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-number">3</div>
+        <div class="step-label">選擇信用卡</div>
+      </div>
+      <div class="step" data-step="4">
+        <div class="step-number">4</div>
+        <div class="step-label">確認折抵</div>
+      </div>
+    </div>
+
+    <!-- 步驟 1: 選擇停車場 -->
+    <div class="step-content active" id="step1">
+      <div class="section-title">📍 選擇停車場</div>
+      <ul class="parking-list">
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=%2b18IEzvOCsljWE%2fSeR2jWQ">
+          <div class="parking-name">南港展覽館二館</div>
+          <div class="parking-location">台北市南港區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=MwfD5aWI6zA1D1hnZ%2FR6qA">
+          <div class="parking-name">南港展覽館一館</div>
+          <div class="parking-location">台北市南港區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=H1iN9j%2B5lhtz3ZT3naB8Fw">
+          <div class="parking-name">內湖機場</div>
+          <div class="parking-location">台北市內湖區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=s3C5c9GDJHoy7q3KNdOx1A">
+          <div class="parking-name">中山北夏慕尼</div>
+          <div class="parking-location">台北市中山區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=Ee63SdDH7%2B8L4QcjYhnziw">
+          <div class="parking-name">七星公園</div>
+          <div class="parking-location">台北市士林區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=Qh%2Fflz5EeMHeF9clsk0b%2Fg">
+          <div class="parking-name">三重朝陽 大都會公園</div>
+          <div class="parking-location">新北市三重區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=S2UudAzdyHtmyOxjEF0TCw">
+          <div class="parking-name">國父紀念館 - 光復站</div>
+          <div class="parking-location">台北市大安區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=JHy%2BE0MBb4xx6hF%2BnuL2Aw">
+          <div class="parking-name">國父紀念館 - 忠孝站</div>
+          <div class="parking-location">台北市大安區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=6CZ3mossA%2FNwfi3vUOP4hQ">
+          <div class="parking-name">大安高工</div>
+          <div class="parking-location">台北市大安區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=EGpieUXx45fMjQFWKx5TVA">
+          <div class="parking-name">木柵動物園</div>
+          <div class="parking-location">台北市文山區</div>
+        </li>
+        <li class="parking-item" data-url="https://www.dodohome.com.tw/iwebpay/doSearchCar.aspx?ptcl=U6pBnP%2FvlwE%2FTbR1m6nebw">
+          <div class="parking-name">士林承德公園</div>
+          <div class="parking-location">台北市士林區</div>
+        </li>
+      </ul>
+      <button class="btn btn-primary" id="step1Btn" disabled>下一步：輸入車牌</button>
+    </div>
+
+    <!-- 步驟 2: 輸入車牌 -->
+    <div class="step-content" id="step2">
+      <div class="section-title">🚗 輸入車牌號碼</div>
+      <div class="plate-input-container">
+        <label class="plate-label">請輸入車牌號碼</label>
+        <input type="text" class="plate-input" id="plateInput" placeholder="例如：BQX-2677" maxlength="10">
+      </div>
+      <div class="plate-suggestions">
+        <div class="plate-suggestion" data-plate="BQX-2677">BQX-2677</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="prevStep(1)">上一步</button>
+        <button class="btn btn-primary" id="step2Btn" disabled>下一步：選擇信用卡</button>
+      </div>
+    </div>
+
+    <!-- 步驟 3: 選擇信用卡 -->
+    <div class="step-content" id="step3">
+      <div class="section-title">💳 選擇信用卡</div>
+      <ul class="card-list">
+        <li class="card-item" data-card="alex">
+          <div class="card-header">
+            <div class="card-name">台新卓富-Alex</div>
+            <div class="card-icon">💳</div>
+          </div>
+          <div class="card-benefit">停車繳費享現金回饋</div>
+          <span class="card-tag">可用</span>
+        </li>
+        <li class="card-item" data-card="orris">
+          <div class="card-header">
+            <div class="card-name">台新卓富-Orris</div>
+            <div class="card-icon">💳</div>
+          </div>
+          <div class="card-benefit">停車繳費享現金回饋</div>
+          <span class="card-tag">可用</span>
+        </li>
+        <li class="card-item" data-card="mom">
+          <div class="card-header">
+            <div class="card-name">台新卓富-Mom</div>
+            <div class="card-icon">💳</div>
+          </div>
+          <div class="card-benefit">停車繳費享現金回饋</div>
+          <span class="card-tag">可用</span>
+        </li>
+      </ul>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="prevStep(2)">上一步</button>
+        <button class="btn btn-primary" id="step3Btn" disabled>下一步：確認折抵</button>
+      </div>
+    </div>
+
+    <!-- 步驟 4: 確認折抵 -->
+    <div class="step-content" id="step4">
+      <div class="section-title">✅ 確認繳費資訊</div>
+      <div class="confirm-box">
+        <div class="confirm-item">
+          <div class="confirm-icon">📍</div>
+          <div class="confirm-details">
+            <div class="confirm-title">停車場</div>
+            <div class="confirm-value" id="confirmParking">-</div>
+          </div>
+        </div>
+        <div class="confirm-item">
+          <div class="confirm-icon">🚗</div>
+          <div class="confirm-details">
+            <div class="confirm-title">車牌號碼</div>
+            <div class="confirm-value" id="confirmPlate">-</div>
+          </div>
+        </div>
+        <div class="confirm-item">
+          <div class="confirm-icon">💳</div>
+          <div class="confirm-details">
+            <div class="confirm-title">信用卡</div>
+            <div class="confirm-value" id="confirmCard">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="discount-info">
+        <div class="info-row">
+          <div class="info-label">原始金額</div>
+          <div class="info-value" id="originalAmount">NT$ 0</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">信用卡折抵</div>
+          <div class="info-value highlight" id="discountAmount">- NT$ 0</div>
+        </div>
+        <div class="total-row">
+          <div class="total-label">最終支付</div>
+          <div class="total-value" id="finalAmount">NT$ 0</div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="prevStep(3)">上一步</button>
+        <button class="btn btn-primary" id="step4Btn">前往繳費</button>
+      </div>
+    </div>
+
+    <!-- 隱藏的網址儲存 -->
+    <div class="hidden-url" id="selectedUrl"></div>
+  </div>
+
+  <script>
+    // 狀態管理
+    let currentStep = 1;
+    let selectedParking = null;
+    let selectedPlate = null;
+    let selectedCard = null;
+
+    // 步驟 1: 選擇停車場
+    document.querySelectorAll('.parking-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.parking-item').forEach(i => i.classList.remove('selected'));
+        this.classList.add('selected');
+        selectedParking = {
+          name: this.querySelector('.parking-name').textContent,
+          url: this.dataset.url
+        };
+        document.getElementById('step1Btn').disabled = false;
+        document.getElementById('selectedUrl').textContent = selectedParking.url;
+      });
+    });
+
+    document.getElementById('step1Btn').addEventListener('click', () => goToStep(2));
+
+    // 步驟 2: 輸入車牌
+    const plateInput = document.getElementById('plateInput');
+    const step2Btn = document.getElementById('step2Btn');
+
+    plateInput.addEventListener('input', function() {
+      this.value = this.value.toUpperCase();
+      selectedPlate = this.value.trim();
+      step2Btn.disabled = selectedPlate.length === 0;
+    });
+
+    document.querySelectorAll('.plate-suggestion').forEach(suggestion => {
+      suggestion.addEventListener('click', function() {
+        document.querySelectorAll('.plate-suggestion').forEach(s => s.classList.remove('selected'));
+        this.classList.add('selected');
+        plateInput.value = this.dataset.plate;
+        selectedPlate = this.dataset.plate;
+        step2Btn.disabled = false;
+      });
+    });
+
+    step2Btn.addEventListener('click', () => {
+      if (selectedPlate) {
+        goToStep(3);
+      }
+    });
+
+    // 步驟 3: 選擇信用卡
+    document.querySelectorAll('.card-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.card-item').forEach(i => i.classList.remove('selected'));
+        this.classList.add('selected');
+        selectedCard = {
+          name: this.querySelector('.card-name').textContent,
+          id: this.dataset.card
+        };
+        document.getElementById('step3Btn').disabled = false;
+      });
+    });
+
+    document.getElementById('step3Btn').addEventListener('click', () => {
+      if (selectedCard) {
+        updateConfirmInfo();
+        goToStep(4);
+      }
+    });
+
+    // 步驟 4: 確認折抵
+    function updateConfirmInfo() {
+      document.getElementById('confirmParking').textContent = selectedParking.name;
+      document.getElementById('confirmPlate').textContent = selectedPlate;
+      document.getElementById('confirmCard').textContent = selectedCard.name;
+
+      // 模擬金額（實際使用時可從嘟嘟房 API 獲取）
+      const originalAmount = 100;
+      const discountRate = 0.05; // 5% 折抵
+      const discountAmount = Math.floor(originalAmount * discountRate);
+      const finalAmount = originalAmount - discountAmount;
+
+      document.getElementById('originalAmount').textContent = `NT$ ${originalAmount}`;
+      document.getElementById('discountAmount').textContent = `- NT$ ${discountAmount}`;
+      document.getElementById('finalAmount').textContent = `NT$ ${finalAmount}`;
+    }
+
+    document.getElementById('step4Btn').addEventListener('click', () => {
+      // 跳轉到嘟嘟房繳費頁面
+      const url = document.getElementById('selectedUrl').textContent;
+      if (url) {
+        window.open(url, '_blank');
+      }
+    });
+
+    // 步驟導航
+    function goToStep(step) {
+      // 更新步驟指示器
+      document.querySelectorAll('.step').forEach((s, index) => {
+        const stepNum = index + 1;
+        s.classList.remove('active', 'completed');
+        if (stepNum < step) {
+          s.classList.add('completed');
+        } else if (stepNum === step) {
+          s.classList.add('active');
+        }
+      });
+
+      // 更新內容區塊
+      document.querySelectorAll('.step-content').forEach((content, index) => {
+        content.classList.remove('active');
+        if (index + 1 === step) {
+          content.classList.add('active');
+        }
+      });
+
+      currentStep = step;
+    }
+
+    function prevStep(step) {
+      goToStep(step);
+    }
+  </script>
+</body>
+</html>
